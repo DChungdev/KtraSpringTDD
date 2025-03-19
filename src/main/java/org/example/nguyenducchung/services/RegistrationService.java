@@ -65,7 +65,7 @@ public class RegistrationService {
                 .map(Registration::getCourse)
                 .collect(Collectors.toList());
 
-        registeredCourses.add(course); // **Thêm khóa học mới**
+        registeredCourses.add(course);
 
         return registeredCourses;
     }

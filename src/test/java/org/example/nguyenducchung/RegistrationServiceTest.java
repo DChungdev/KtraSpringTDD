@@ -38,7 +38,6 @@ class RegistrationServiceTest {
 
     @Test
     void testRegisterCourse_Success_WithDiscount() {
-        // Given
         Student student = Student.builder()
                 .id(1L)
                 .email("student@example.com")
@@ -86,17 +85,14 @@ class RegistrationServiceTest {
                 .price(3000L)
                 .build();
 
-        // Mock dữ liệu
         when(studentRepository.findByEmail(student.getEmail())).thenReturn(student);
         when(courseRepository.findById(newCourse.getId())).thenReturn(Optional.of(newCourse));
 
-        // Danh sách đăng ký ban đầu
         List<Registration> existingRegistrations = new ArrayList<>(Arrays.asList(existingRegistration1, existingRegistration2));
 
         when(registrationRepository.findByStudentId(student.getId()))
                 .thenAnswer(invocation -> new ArrayList<>(existingRegistrations)); // Luôn trả về danh sách hiện tại
 
-        // 2 khóa học -> đăng ký khóa mới sẽ giảm giá 25%
         Long expectedPrice = newCourse.getPrice() * 75 / 100;
 
         when(registrationRepository.save(any(Registration.class)))
@@ -111,17 +107,15 @@ class RegistrationServiceTest {
 
         // Then
         assertNotNull(registeredCourses);
-        assertEquals(3, registeredCourses.size()); // Kiểm tra có đúng 3 khóa học
+        assertEquals(3, registeredCourses.size());
         verify(registrationRepository).save(argThat(reg -> reg.getPrice().equals(expectedPrice)));
     }
 
     @Test
     void shouldThrowExceptionWhenRegisteringForStartedCourse() {
-        // Given: Sinh viên đã có trong database
         String studentEmail = "student@example.com";
         Student student = Student.builder().id(1L).email(studentEmail).build();
 
-        // Tạo khóa học đã bắt đầu (ngày bắt đầu là hôm qua)
         Date startDate = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000); // Hôm qua
         Date endDate = new Date(System.currentTimeMillis() + 10 * 24 * 60 * 60 * 1000); // 10 ngày sau
 
@@ -136,14 +130,12 @@ class RegistrationServiceTest {
         when(studentRepository.findByEmail(studentEmail)).thenReturn(student);
         when(courseRepository.findById(2L)).thenReturn(Optional.of(startedCourse));
 
-        // When - Then: Gọi registerCourse và mong đợi ngoại lệ
         RuntimeException thrown = assertThrows(RuntimeException.class, () -> {
             registrationService.registerCourse(studentEmail, 2L);
         });
 
         assertEquals("Cannot register for a course that has already started", thrown.getMessage());
 
-        // Verify: Không lưu vào database
         verify(registrationRepository, never()).save(any(Registration.class));
     }
 
@@ -177,7 +169,7 @@ class RegistrationServiceTest {
         when(studentRepository.findByEmail(student.getEmail())).thenReturn(student);
         when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
         when(registrationRepository.findByStudentId(student.getId()))
-                .thenReturn(List.of(existingRegistration)); // 🔥 Sinh viên đã đăng ký khóa học này
+                .thenReturn(List.of(existingRegistration));
 
         // When & Then
         Exception exception = assertThrows(RuntimeException.class, () ->
@@ -303,26 +295,22 @@ class RegistrationServiceTest {
 
     @Test
     void shouldThrowExceptionWhenUnregisteringWithNonExistentStudent() {
-        // Given: Không có sinh viên trong database
         String studentEmail = "nonexistent@example.com";
         Long courseId = 1L;
 
         when(studentRepository.findByEmail(studentEmail)).thenReturn(null);
 
-        // When - Then: Gọi unregisterCourse và mong đợi ngoại lệ
         RuntimeException thrown = assertThrows(RuntimeException.class, () -> {
             registrationService.unregisterCourse(studentEmail, courseId);
         });
 
         assertEquals("Student not found", thrown.getMessage());
 
-        // Verify: Không có thao tác xóa nào
         verify(registrationRepository, never()).delete(any(Registration.class));
     }
 
     @Test
     void testUnregisterCourse_StudentNotRegistered() {
-        // Giả lập sinh viên và khóa học tồn tại
         Student student = Student.builder()
                 .id(1L)
                 .email("student@example.com")
@@ -340,18 +328,16 @@ class RegistrationServiceTest {
         when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
         when(registrationRepository.findByStudentId(student.getId())).thenReturn(Collections.emptyList()); // Không có đăng ký nào
 
-        // Gọi service và kiểm tra exception
         Exception exception = assertThrows(RuntimeException.class, () -> {
             registrationService.unregisterCourse(student.getEmail(), course.getId());
         });
 
         assertEquals("Registration not found", exception.getMessage());
-        verify(registrationRepository, never()).delete(any(Registration.class)); // Không xóa bản ghi nào
+        verify(registrationRepository, never()).delete(any(Registration.class));
     }
 
     @Test
     void testUnregisterCourse_CourseAlreadyStarted() {
-        // Giả lập sinh viên và khóa học tồn tại
         Student student = Student.builder()
                 .id(1L)
                 .email("student@example.com")
@@ -362,7 +348,7 @@ class RegistrationServiceTest {
         Course course = Course.builder()
                 .id(1L)
                 .name("Java Basics")
-                .startTime(new Date(System.currentTimeMillis() - 86400000)) // Khóa học đã bắt đầu (1 ngày trước)
+                .startTime(new Date(System.currentTimeMillis() - 86400000))
                 .build();
 
         Registration registration = Registration.builder()
@@ -382,7 +368,7 @@ class RegistrationServiceTest {
         });
 
         assertEquals("Cannot unregister from a course that has already started", exception.getMessage());
-        verify(registrationRepository, never()).delete(any(Registration.class)); // Không xóa bản ghi nào
+        verify(registrationRepository, never()).delete(any(Registration.class));
     }
 
 }
